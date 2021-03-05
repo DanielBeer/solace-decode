@@ -51,10 +51,11 @@ spring:
 # Solace PubSub+ Config
 solace:
   java:
-    host: localhost
-    msgVpn: default
-    clientUsername: default
-    clientPassword: default
+    host: tcps://mr16jp1pl8afc3.messaging.solace.cloud:55443
+    msgVpn: troubleflipper
+    userName: solace-cloud-client
+    clientUsername: server
+    clientPassword: v5jio5c4chmfsf9mtflehlaj14
     connectRetries: 3
     reconnectRetries: -1
 

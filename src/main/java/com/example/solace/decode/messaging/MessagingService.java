@@ -1,7 +1,9 @@
 package com.example.solace.decode.messaging;
 
+import com.example.solace.decode.config.SolaceJavaProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solacesystems.jcsmp.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,16 +16,21 @@ public class MessagingService {
     private Integer reconnectRetries;
     private JCSMPSession session;
     private XMLMessageProducer prod;
+    private XMLMessageConsumer cons;
     private ObjectMapper objectMapper;
 
+    private SolaceJavaProperties solaceJavaProperties;
 
-    public MessagingService() throws Exception {
-        this.url = "tcps://mr16jp1pl8afc3.messaging.solace.cloud:55443";
-        this.vpnName = "troubleflipper";
-        this.userName = "solace-cloud-client";
-        this.clientName = "server";
-        this.password = "v5jio5c4chmfsf9mtflehlaj14";
-        this.reconnectRetries = -1;
+    @Autowired
+    public MessagingService(SolaceJavaProperties solaceJavaProperties) throws Exception {
+        this.solaceJavaProperties = solaceJavaProperties;
+
+        this.url = solaceJavaProperties.getHost();
+        this.vpnName = solaceJavaProperties.getMsgVpn();
+        this.userName = solaceJavaProperties.getUserName();
+        this.clientName = solaceJavaProperties.getClientUsername();
+        this.password = solaceJavaProperties.getClientPassword();
+        this.reconnectRetries = solaceJavaProperties.getReconnectRetries();
         final JCSMPProperties properties = new JCSMPProperties();
         properties.setProperty(JCSMPProperties.HOST, url);
         properties.setProperty(JCSMPProperties.USERNAME, userName);
@@ -48,6 +55,24 @@ public class MessagingService {
                         messageID,timestamp,e);
             }
         });
+        this.cons = session.getMessageConsumer(new XMLMessageListener() {
+
+            @Override
+            public void onReceive(BytesXMLMessage msg) {
+                if (msg instanceof TextMessage) {
+                    System.out.printf("TextMessage received: '%s'%n",
+                            ((TextMessage)msg).getText());
+                } else {
+                    System.out.println("Message received.");
+                }
+                System.out.printf("Message Dump:%n%s%n",msg.dump());
+            }
+
+            @Override
+            public void onException(JCSMPException e) {
+                System.out.printf("Consumer received exception: %s%n",e);
+            }
+        });
 
     }
 
@@ -59,4 +84,9 @@ public class MessagingService {
         prod.send(msg,topic);
     }
 
+    public void subscribe(String topicName) throws Exception {
+        final Topic topic = JCSMPFactory.onlyInstance().createTopic(topicName);
+        session.addSubscription(topic);
+        cons.start();
+    }
 }
